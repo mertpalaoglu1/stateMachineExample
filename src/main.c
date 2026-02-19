@@ -23,7 +23,7 @@ struct sm_context {
     app_state_tasks current_state; //mevcut durumu tutacak
     struct k_work_delayable sm_work; // gecikmeli veya anlık çalışabilen work itemini tutacak
     uint8_t process_counter; //işlemlerin sayısını takip etmek için kullanılacak.
-}
+};
 
 
 struct sm_context my_sm; //kendi state machine değişkenimiz.
