@@ -158,7 +158,8 @@ void state_init_run(struct sm_context *ctx){
 
 void state_idle_run(struct sm_context *ctx){
     LOG_INF("Current State is IDLE, Waiting for events.");
-    
+    gpio_pin_set_dt(&error_led, 0);//idle'a geri dönünce error kapansın diye.
+
     //BURADA EVENT OLUYOR MU DİYE BAKACAK ek bir flag ile kontrol sağlanacak mesela.
     
     // --- EXIT / TRANSITION KISMI ---
@@ -191,10 +192,11 @@ void state_active_run(struct sm_context *ctx){
     }
 };
 void state_error_run(struct sm_context *ctx){
-
+   
     LOG_INF("Current State is ERROR, Your Card is not valid!\n");
 
     //TODO ERROR FLAG ONA GÖRE KONTROL VE İŞLEM OLACAK.
+    gpio_pin_set_dt(&error_led, 1);
 
     LOG_INF("DEMO: [ERROR] -> [IDLE] \n");
     ctx->current_state = STATE_IDLE; //hata durumundan sonra tekrar idle'a dönelim.
