@@ -153,17 +153,19 @@ void state_init_run(struct sm_context *ctx){
 
 void state_idle_run(struct sm_context *ctx){
     LOG_INF("Current State is IDLE, Waiting for events.");
-    gpio_pin_set_dt(&error_led, 0);//eğer errordan geliyorsa idle'a geri dönünce error kapansın diye.
-
-    if (buttonPressedFlag==true){
-       // --- EXIT / TRANSITION KISMI ---
-    LOG_INF("DEMO: [IDLE] -> [ACTIVE] because Button0 Pressed \n");
-
-    // Zephyr workqueue'nun gücü: while ile beklemek yerine 
-    // work item'ı 1 saniye sonraya "zamanlıyoruz". O sırada işlemci uyuyabilir.
-    ctx->current_state = STATE_ACTIVE;
-    k_work_schedule(&ctx->sm_work, K_SECONDS(1));
-    }
+    gpio_pin_set_dt(&error_led, 0);//eğer errordan geliyorsa idle'a geri dönünce error kapansın diye düzenlenecek.
+    
+        if (buttonPressedFlag==true){
+            // --- EXIT / TRANSITION KISMI ---
+            LOG_INF("DEMO: [IDLE] -> [ACTIVE] because Button0 Pressed \n");
+            // Zephyr workqueue'nun gücü: while ile beklemek yerine work item'ı 1 saniye sonraya "zamanlayabiliriz". O sırada işlemci uyuyabilir.
+            // ama burada direkt aktif state'e geçsin istiyorum.
+            ctx->current_state = STATE_ACTIVE;
+            k_work_submit(&ctx->sm_work.work);
+        }
+        else{
+            //sleep 
+        }
 };
 
 
