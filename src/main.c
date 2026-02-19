@@ -8,6 +8,18 @@
 
 LOG_MODULE_REGISTER(my_state_machine, LOG_LEVEL_INF);
 
+static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(DT_ALIAS(button0), gpios, {0});
+static struct gpio_dt_spec idle_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0});
+static struct gpio_dt_spec gate_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios, {0});
+static struct gpio_dt_spec error_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0});
+static struct gpio_callback button_cb_data;
+
+void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    //todo: led0 yakma eklenecek 5 saniye blink.
+	printk("Button pressed");
+}
+
 
 //durumlarımı tanımlamak için typedef ile enum 
 typedef enum {
@@ -70,12 +82,67 @@ void sm_work_handler(struct k_work *work){
 void state_init_run(struct sm_context *ctx){
 //bu fonksiyon ilk ayarları yaptıktan sonra direkt state'ini güncelleyip
 //aktif state'i idle'a çekecek. Yani cihaz kurulumdan sonra kart bekleyecek.
-    LOG_INF("Current State is INIT, Setting up the system.");
+
+    LOG_INF("Current State is INIT, Setting up the system.\n");
     ctx->process_counter = 0; //işlem sayacını sıfırla
 
     //BURADA BAŞKA İŞLEMLER DE YAPABİLİR.
+    int ret;
 
-    LOG_INF("INIT is done! Current is setting up to IDLE now.");
+	if (!gpio_is_ready_dt(&button)) {
+		printk("Error: button device %s is not ready\n",
+		       button.port->name);
+		return 0;
+	}
+
+	ret = gpio_pin_configure_dt(&button, GPIO_INPUT);
+	if (ret != 0) {
+		printk("Error %d: failed to configure %s pin %d\n",
+		       ret, button.port->name, button.pin);
+		return 0;
+	}
+
+	ret = gpio_pin_interrupt_configure_dt(&button, GPIO_INT_EDGE_TO_ACTIVE);
+	if (ret != 0) {
+		printk("Error %d: failed to configure interrupt on %s pin %d\n",
+			ret, button.port->name, button.pin);
+		return 0;
+	}
+
+	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
+	gpio_add_callback(button.port, &button_cb_data);
+
+    if (gate_led.port) {
+		ret = gpio_pin_configure_dt(&gate_led, GPIO_OUTPUT);
+		if (ret != 0) {
+			printk("Error %d: failed to configure LED device %s pin %d\n",
+			       ret, gate_led.port->name, gate_led.pin);
+		} else {
+			printk("Set up LED at %s pin %d\n", gate_led.port->name, gate_led.pin);
+		}
+	}
+
+        if (idle_led.port) {
+		ret = gpio_pin_configure_dt(&idle_led, GPIO_OUTPUT);
+		if (ret != 0) {
+			printk("Error %d: failed to configure LED device %s pin %d\n",
+			       ret, idle_led.port->name, idle_led.pin);
+		} else {
+			printk("Set up LED at %s pin %d\n", idle_led.port->name, idle_led.pin);
+		}
+	}
+
+        if (error_led.port) {
+		ret = gpio_pin_configure_dt(&error_led, GPIO_OUTPUT);
+		if (ret != 0) {
+			printk("Error %d: failed to configure LED device %s pin %d\n",
+			       ret, error_led.port->name, error_led.pin);
+		} else {
+			printk("Set up LED at %s pin %d\n", error_led.port->name, error_led.pin);
+		}
+	}
+
+    LOG_INF("INIT is done! Current STATE is setting up to IDLE now, waiting for CARD input.(Button 0) \n");
     ctx->current_state = STATE_IDLE; //durumu idle yap.
 
     // İşlemin 'hemen' devam etmesi için system workqueue'ya tekrar ekle
