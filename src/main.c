@@ -169,6 +169,7 @@ void state_idle_run(struct sm_context *ctx){
 
 void state_active_run(struct sm_context *ctx){
     LOG_INF("Current State is ACTIVE, Processing events. process counter: %d ", ctx->process_counter);
+    gpio_pin_set_dt(&idle_led,0); // aktifken idleled kapansın.
     // Her bir yarım saniyede bir bu fonksiyon çalışacak. 
     // 5 tam aç/kapa = 10 yarım adım eder. Sayacı 10'a kadar saydıracağız.
     if (ctx->process_counter < 10) {
@@ -215,7 +216,7 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t
     //buton callback'i ile uyandıracağız sistemi.
     // Sadece sistem beklemedeyken turnike tetiklenebilir
     if (my_sm.current_state == STATE_IDLE) {
-        LOG_INF("DEMO: Kesme Geldi! Turnike Tetikleniyor...");
+        LOG_INF("DEMO: Button pressed (Card is active!), processing ACTIVE state");
         
         my_sm.current_state = STATE_ACTIVE;
         k_work_submit(&my_sm.sm_work.work); }
