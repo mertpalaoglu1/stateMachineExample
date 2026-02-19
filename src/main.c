@@ -16,8 +16,14 @@ static struct gpio_callback button_cb_data;
 
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    //todo: led0 yakma eklenecek 5 saniye blink.
-	printk("Button pressed");
+    LOG_INF("Card Active! (Button Pressed) \n");
+    for(int i=0;i<5;i++){
+        gpio_pin_set_dt(&gate_led,1);
+        k_sleep(K_MSEC(500));
+        gpio_pin_set_dt(&gate_led,0);
+        k_sleep(K_MSEC(500));
+    }
+    
 }
 
 
@@ -80,13 +86,12 @@ void sm_work_handler(struct k_work *work){
 
 
 void state_init_run(struct sm_context *ctx){
-//bu fonksiyon ilk ayarları yaptıktan sonra direkt state'ini güncelleyip
+//bu fonksiyon ilk kurulum ayarlarını yaptıktan sonra direkt state'ini güncelleyip
 //aktif state'i idle'a çekecek. Yani cihaz kurulumdan sonra kart bekleyecek.
 
     LOG_INF("Current State is INIT, Setting up the system.\n");
     ctx->process_counter = 0; //işlem sayacını sıfırla
 
-    //BURADA BAŞKA İŞLEMLER DE YAPABİLİR.
     int ret;
 
 	if (!gpio_is_ready_dt(&button)) {
@@ -122,7 +127,7 @@ void state_init_run(struct sm_context *ctx){
 		}
 	}
 
-        if (idle_led.port) {
+    if (idle_led.port) {
 		ret = gpio_pin_configure_dt(&idle_led, GPIO_OUTPUT);
 		if (ret != 0) {
 			printk("Error %d: failed to configure LED device %s pin %d\n",
@@ -132,7 +137,7 @@ void state_init_run(struct sm_context *ctx){
 		}
 	}
 
-        if (error_led.port) {
+    if (error_led.port) {
 		ret = gpio_pin_configure_dt(&error_led, GPIO_OUTPUT);
 		if (ret != 0) {
 			printk("Error %d: failed to configure LED device %s pin %d\n",
