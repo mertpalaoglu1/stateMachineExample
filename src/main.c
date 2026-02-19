@@ -84,7 +84,7 @@ void state_init_run(struct sm_context *ctx){
 //bu fonksiyon ilk kurulum ayarlarını yaptıktan sonra direkt state'ini güncelleyip
 //aktif state'i idle'a çekecek. Yani cihaz kurulumdan sonra kart bekleyecek.
 
-    LOG_INF("Current State is INIT, Setting up the system.\n");
+    LOG_INF("Current State is INIT, Setting up the system.");
     ctx->process_counter = 0; //işlem sayacını sıfırla
 
     int ret;
@@ -142,7 +142,7 @@ void state_init_run(struct sm_context *ctx){
 		}
 	}
 
-    LOG_INF("INIT is done! Current STATE is setting up to IDLE now, waiting for CARD input. (Button 0) \n");
+    LOG_INF("INIT is done! Current STATE is setting up to IDLE now, waiting for CARD input. (Button 0) ");
     ctx->current_state = STATE_IDLE; //durumu idle yap.
 
     // İşlemin 'hemen' devam etmesi için system workqueue'ya tekrar ekle
@@ -157,7 +157,7 @@ void state_idle_run(struct sm_context *ctx){
     
         if (buttonPressedFlag==true){
             // --- EXIT / TRANSITION KISMI ---
-            LOG_INF("DEMO: [IDLE] -> [ACTIVE] because Button0 Pressed \n");
+            LOG_INF("DEMO: [IDLE] -> [ACTIVE] because Button 0 Pressed ");
             // Zephyr workqueue'nun gücü: while ile beklemek yerine work item'ı 1 saniye sonraya "zamanlayabiliriz". O sırada işlemci uyuyabilir.
             // ama burada direkt aktif state'e geçsin istiyorum.
             ctx->current_state = STATE_ACTIVE;
@@ -166,28 +166,42 @@ void state_idle_run(struct sm_context *ctx){
         else{
             //sleep 
         }
-};
+}
 
 
 void state_active_run(struct sm_context *ctx){
-    LOG_INF("Current State is ACTIVE, Processing events. process counter: %d ", ctx->process_counter\n);
-    
-     //TODO: BURADA İŞLEMLER YAPILACAK, ÖRNEĞİN KART OKUMA, TURNİKE DÖNDÜRME VS.
-     
-    ctx->process_counter++; //işlem sayacını artır
-    
-    //TODO: işte içinde saysın, eğer 5 saniye işlem olmazsa kapansın ve idle'a dönsün vs.
-    if (ctx->process_counter > 4){
-        LOG_INF("DEMO: [ACTIVE] -> [IDLE] because it processed 5 times. ");
+    LOG_INF("Current State is ACTIVE, Processing events. process counter: %d ", ctx->process_counter);
+    // Her bir yarım saniyede bir bu fonksiyon çalışacak. 
+    // 5 tam aç/kapa = 10 yarım adım eder. Sayacı 10'a kadar saydıracağız.
+    if (ctx->process_counter < 10) {
+        
+        // Pin'in o anki durumunu alıp tersine (toggle) çeviriyoruz
+        int current_state = gpio_pin_get_dt(&gate_led);
+        gpio_pin_set_dt(&gate_led, !current_state);
+        
+        ctx->process_counter++; // Sayacı 1 artır
+        
+        // SİSTEMİ UYUTMAMAK İÇİN! Kendini 500ms sonra tekrar çalışması için kuyruğa ekle.
+        // Bu sayede o 500ms boyunca işlemci başka işleri halledebilir.
+        k_work_schedule(&ctx->sm_work, K_MSEC(500)); 
+        
+    } else {
+        LOG_INF("DEMO: [ACTIVE] -> [IDLE] because it processed for 5 seconds.");
+        
+        gpio_pin_set_dt(&gate_led, 0);// gate led kapansın
+        
+        // IDLE'a geçiyoruz
         ctx->current_state = STATE_IDLE;
-        k_work_schedule(&ctx->sm_work, K_MSEC(500)); //yarım saniye sonra idle'a geçiş yapalım.
-    }  
-    else {
-        // Sayı doldu, state machine görevini tamamladı.
-        LOG_INF("[ACTIVE] Islem tamamlandi. State Machine duruyor.");
-        // KENDİNİ TEKRAR ÇAĞIRMIYOR (Submit yok). Kuyruk burada sonlanır.
+        
+        // Bir sonraki sefer (başka biri turnikeden geçerse) sayacın sıfırdan 
+        // başlaması için sayacı mutlaka sıfırlıyoruz.
+        ctx->process_counter = 0; 
+        
+        // Beklemeden direkt IDLE fonksiyonuna geçiş yapması için hemen tetikle.
+        k_work_submit(&ctx->sm_work.work); 
     }
 };
+
 void state_error_run(struct sm_context *ctx){
    
     LOG_INF("Current State is ERROR, Your Card is not valid!\n");
@@ -195,7 +209,7 @@ void state_error_run(struct sm_context *ctx){
     //TODO ERROR FLAG ONA GÖRE KONTROL VE İŞLEM OLACAK.
     gpio_pin_set_dt(&error_led, 1);
 
-    LOG_INF("DEMO: [ERROR] -> [IDLE] \n");
+    LOG_INF("DEMO: [ERROR] -> [IDLE]");
     ctx->current_state = STATE_IDLE; //hata durumundan sonra tekrar idle'a dönelim.
     k_work_schedule(&ctx->sm_work, K_MSEC(1500)); //1.5 saniye sonra idle'a geçiş yapalım. listeye de 1.5 saniye sonra ekle. o sırada diğer işlemleri yapabilirsin.
 };
