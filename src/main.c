@@ -30,7 +30,7 @@ struct sm_context my_sm; //kendi state machine değişkenimiz.
 
 
 //fonksiyon prototipleri 
-void state_init_run(struct sm_context *ctx); //hepsi toplu context alıyor.
+void state_init_run(struct sm_context *ctx); //hepsi toplu haldeki contexti alıyor, birleştirilmiş kwork değişkeni ile.
 void state_idle_run(struct sm_context *ctx);
 void state_active_run(struct sm_context *ctx);
 void state_error_run(struct sm_context *ctx);
@@ -43,7 +43,7 @@ void sm_work_handler(struct k_work *work){
     //burada ctx aslında hem durum hem sayaç gibi değişkenleri tutan bir struct, daha okunabilir ve toplu olması için.
     //fonksiyonlara sadece ctx göndereceğiz o oradan çekecek kendi mevzusuna ait olanları.
     struct k_work_delayable *dwork = k_work_delayable_from_work(work);
-    struct sm_context *ctx = CONTAINER_OF(dwork, struct sm_context, sm_work);
+    struct sm_context *ctx = CONTAINER_OF(dwork, struct sm_context, sm_work); //comtainerof geri pointer döndürüyor, içinde itemler olan structları verince.
 
 
     //ctx yani context yani mevcut duruma göre fonksiyonları çağırıyor.
@@ -69,7 +69,7 @@ void sm_work_handler(struct k_work *work){
 
 void state_init_run(struct sm_context *ctx){
 //bu fonksiyon ilk ayarları yaptıktan sonra direkt state'ini güncelleyip
-//aktif state'i idle'a çekecek. kurulumdan sonra bekleyecek.
+//aktif state'i idle'a çekecek. Yani cihaz kurulumdan sonra kart bekleyecek.
     LOG_INF("Current State is INIT, Setting up the system.");
     ctx->process_counter = 0; //işlem sayacını sıfırla
 
@@ -120,13 +120,13 @@ void state_active_run(struct sm_context *ctx){
 };
 void state_error_run(struct sm_context *ctx){
 
-    LOG_INF("Current State is ERROR, Handling error.")
+    LOG_INF("Current State is ERROR, Your Card is not valid!\n");
 
     //TODO ERROR FLAG ONA GÖRE KONTROL VE İŞLEM OLACAK.
 
-    LOG_INF("DEMO: [ERROR] -> [IDLE] gecisi icin 1 saniye sayiliyor.");
+    LOG_INF("DEMO: [ERROR] -> [IDLE] \n");
     ctx->current_state = STATE_IDLE; //hata durumundan sonra tekrar idle'a dönelim.
-    k_work_schedule(&ctx->sm_work, K_SECONDS(1)); //1 saniye sonra idle'a geçiş yapalım. listeye de 1 saniye sonra ekle. o sırada diğer işlemleri yapabilirsin.
+    k_work_schedule(&ctx->sm_work, K_MSEC(1500)); //1.5 saniye sonra idle'a geçiş yapalım. listeye de 1.5 saniye sonra ekle. o sırada diğer işlemleri yapabilirsin.
 };
 
 
