@@ -8,7 +8,7 @@
 
 LOG_MODULE_REGISTER(my_state_machine, LOG_LEVEL_INF);
 
-static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(DT_ALIAS(button0), gpios, {0});
+static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
 static struct gpio_dt_spec idle_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0});
 static struct gpio_dt_spec gate_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios, {0});
 static struct gpio_dt_spec error_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0});
