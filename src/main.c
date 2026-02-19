@@ -14,16 +14,11 @@ static struct gpio_dt_spec gate_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios,
 static struct gpio_dt_spec error_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0});
 static struct gpio_callback button_cb_data;
 
+bool buttonPressedFlag = false;
+
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    LOG_INF("Card Active! (Button Pressed) \n");
-    for(int i=0;i<5;i++){
-        gpio_pin_set_dt(&gate_led,1);
-        k_sleep(K_MSEC(500));
-        gpio_pin_set_dt(&gate_led,0);
-        k_sleep(K_MSEC(500));
-    }
-    
+    buttonPressedFlag = true;
 }
 
 
@@ -147,7 +142,7 @@ void state_init_run(struct sm_context *ctx){
 		}
 	}
 
-    LOG_INF("INIT is done! Current STATE is setting up to IDLE now, waiting for CARD input.(Button 0) \n");
+    LOG_INF("INIT is done! Current STATE is setting up to IDLE now, waiting for CARD input. (Button 0) \n");
     ctx->current_state = STATE_IDLE; //durumu idle yap.
 
     // İşlemin 'hemen' devam etmesi için system workqueue'ya tekrar ekle
@@ -158,25 +153,25 @@ void state_init_run(struct sm_context *ctx){
 
 void state_idle_run(struct sm_context *ctx){
     LOG_INF("Current State is IDLE, Waiting for events.");
-    gpio_pin_set_dt(&error_led, 0);//idle'a geri dönünce error kapansın diye.
+    gpio_pin_set_dt(&error_led, 0);//eğer errordan geliyorsa idle'a geri dönünce error kapansın diye.
 
-    //BURADA EVENT OLUYOR MU DİYE BAKACAK ek bir flag ile kontrol sağlanacak mesela.
-    
-    // --- EXIT / TRANSITION KISMI ---
-    LOG_INF("DEMO: [IDLE] -> [ACTIVE] gecisi icin 2 saniye sayiliyor.");
-    ctx->current_state = STATE_ACTIVE;
-    
+    if (buttonPressedFlag==true){
+       // --- EXIT / TRANSITION KISMI ---
+    LOG_INF("DEMO: [IDLE] -> [ACTIVE] because Button0 Pressed \n");
+
     // Zephyr workqueue'nun gücü: while ile beklemek yerine 
-    // work item'ı 2 saniye sonraya "zamanlıyoruz". O sırada işlemci uyuyabilir.
-    k_work_schedule(&ctx->sm_work, K_SECONDS(2));
+    // work item'ı 1 saniye sonraya "zamanlıyoruz". O sırada işlemci uyuyabilir.
+    ctx->current_state = STATE_ACTIVE;
+    k_work_schedule(&ctx->sm_work, K_SECONDS(1));
+    }
 };
 
 
 void state_active_run(struct sm_context *ctx){
-    LOG_INF("Current State is ACTIVE, Processing events. process counter: %d ", ctx->process_counter);
+    LOG_INF("Current State is ACTIVE, Processing events. process counter: %d ", ctx->process_counter\n);
     
      //TODO: BURADA İŞLEMLER YAPILACAK, ÖRNEĞİN KART OKUMA, TURNİKE DÖNDÜRME VS.
-    
+     
     ctx->process_counter++; //işlem sayacını artır
     
     //TODO: işte içinde saysın, eğer 5 saniye işlem olmazsa kapansın ve idle'a dönsün vs.
