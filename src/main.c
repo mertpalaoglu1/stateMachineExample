@@ -14,13 +14,6 @@ static struct gpio_dt_spec gate_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios,
 static struct gpio_dt_spec error_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0});
 static struct gpio_callback button_cb_data;
 
-bool buttonPressedFlag = false;
-
-void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
-{
-    buttonPressedFlag = true;
-}
-
 
 //durumlarımı tanımlamak için typedef ile enum 
 typedef enum {
@@ -47,7 +40,7 @@ void state_init_run(struct sm_context *ctx); //hepsi toplu haldeki contexti alı
 void state_idle_run(struct sm_context *ctx);
 void state_active_run(struct sm_context *ctx);
 void state_error_run(struct sm_context *ctx);
-
+void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
 
 //ana work handler, tüm kontrolleri yapıp durumları dağıtacak olan şekli ile
 
@@ -154,8 +147,13 @@ void state_init_run(struct sm_context *ctx){
 void state_idle_run(struct sm_context *ctx){
     LOG_INF("Current State is IDLE, Waiting for events.");
     gpio_pin_set_dt(&error_led, 0);//eğer errordan geliyorsa idle'a geri dönünce error kapansın diye düzenlenecek.
-    
-        if (buttonPressedFlag==true){
+    gpio_pin_set_dt(&gate_led, 0);
+    gpio_pin_set_dt(&idle_led, 1);
+
+    //sonra sleep
+
+
+      /*  if (buttonPressedFlag==true){
             // --- EXIT / TRANSITION KISMI ---
             LOG_INF("DEMO: [IDLE] -> [ACTIVE] because Button 0 Pressed ");
             // Zephyr workqueue'nun gücü: while ile beklemek yerine work item'ı 1 saniye sonraya "zamanlayabiliriz". O sırada işlemci uyuyabilir.
@@ -165,7 +163,7 @@ void state_idle_run(struct sm_context *ctx){
         }
         else{
             //sleep 
-        }
+        }*/
 }
 
 
@@ -211,6 +209,17 @@ void state_error_run(struct sm_context *ctx){
     k_work_schedule(&ctx->sm_work, K_MSEC(1500)); //1.5 saniye sonra idle'a geçiş yapalım. listeye de 1.5 saniye sonra ekle. o sırada diğer işlemleri yapabilirsin.
 };
 
+
+void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    //buton callback'i ile uyandıracağız sistemi.
+    // Sadece sistem beklemedeyken turnike tetiklenebilir
+    if (my_sm.current_state == STATE_IDLE) {
+        LOG_INF("DEMO: Kesme Geldi! Turnike Tetikleniyor...");
+        
+        my_sm.current_state = STATE_ACTIVE;
+        k_work_submit(&my_sm.sm_work.work); }
+}
 
 int main(void){
 
