@@ -175,10 +175,7 @@ void state_active_run(struct sm_context *ctx){
     // 5 tam aç/kapa = 10 yarım adım eder. Sayacı 10'a kadar saydıracağız.
     if (ctx->process_counter < 10) {
         
-        // Pin'in o anki durumunu alıp tersine (toggle) çeviriyoruz
-        int current_state = gpio_pin_get_dt(&gate_led);
-        gpio_pin_set_dt(&gate_led, !current_state);
-        
+        gpio_pin_toggle_dt(&gate_led);
         ctx->process_counter++; // Sayacı 1 artır
         
         // SİSTEMİ UYUTMAMAK İÇİN! Kendini 500ms sonra tekrar çalışması için kuyruğa ekle.
