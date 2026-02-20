@@ -9,11 +9,12 @@
 LOG_MODULE_REGISTER(my_state_machine, LOG_LEVEL_INF);
 
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
+static const struct gpio_dt_spec error_button = GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw1), gpios, {0});
 static struct gpio_dt_spec idle_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0});
 static struct gpio_dt_spec gate_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios, {0});
 static struct gpio_dt_spec error_led = GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0});
 static struct gpio_callback button_cb_data;
-
+static struct gpio_callback button2_cb_data;
 
 //durumlarımı tanımlamak için typedef ile enum 
 typedef enum {
@@ -41,6 +42,7 @@ void state_idle_run(struct sm_context *ctx);
 void state_active_run(struct sm_context *ctx);
 void state_error_run(struct sm_context *ctx);
 void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
+void error_button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
 
 //ana work handler, tüm kontrolleri yapıp durumları dağıtacak olan şekli ile
 
@@ -102,8 +104,31 @@ void state_init_run(struct sm_context *ctx){
 		return ;
 	}
 
+    if (!gpio_is_ready_dt(&error_button)) {
+		printk("Error: error button device %s is not ready\n",
+		       error_button.port->name);
+		return ;
+	}
+    
+    ret = gpio_pin_configure_dt(&error_button, GPIO_INPUT);
+	if (ret != 0) {
+		printk("Error %d: failed to configure %s pin %d\n",
+		       ret, error_button.port->name, button.pin);
+		return ;
+	}
+    ret = gpio_pin_interrupt_configure_dt(&error_button, GPIO_INT_EDGE_TO_ACTIVE);
+	if (ret != 0) {
+		printk("Error %d: failed to configure interrupt on %s pin %d\n",
+			ret, error_button.port->name, button.pin);
+		return ;
+	}
+    
 	gpio_init_callback(&button_cb_data, button_pressed, BIT(button.pin));
 	gpio_add_callback(button.port, &button_cb_data);
+
+    gpio_init_callback(&button2_cb_data, error_button_pressed, BIT(error_button.pin));
+	gpio_add_callback(error_button.port, &button2_cb_data);
+
 
     if (gate_led.port) {
 		ret = gpio_pin_configure_dt(&gate_led, GPIO_OUTPUT);
@@ -220,6 +245,10 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t
         
         my_sm.current_state = STATE_ACTIVE;
         k_work_submit(&my_sm.sm_work.work); }
+}
+
+void error_button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins){
+    printk("error button pressed.\n");
 }
 
 int main(void){
