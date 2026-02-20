@@ -254,6 +254,7 @@ void error_button_pressed(const struct device *dev, struct gpio_callback *cb, ui
         my_sm.current_state = STATE_ERROR;
         k_work_schedule(&my_sm.sm_work.work, K_MSEC(0));
     }
+    
 }
 
 int main(void){
